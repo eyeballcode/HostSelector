@@ -9,6 +9,8 @@ let availableServers = config.servers.map(server => {
   if (server.host.startsWith('*')) {
     server.isWildcard = true
     server.matches = server.host.slice(2)
+
+    return server
   } else return server
 })
 
@@ -54,9 +56,10 @@ function createSNICallback() {
 
 function determineDestinationServer(req) {
   let host = req.headers.host || ''
+
   let destinationServer = availableServers.find(server => {
     return server.host === host ||
-      (server.isWildcard && server.matches === host)
+      (server.isWildcard && ('.' + host).endsWith(server.matches))
   })
 
   return destinationServer
@@ -64,6 +67,7 @@ function determineDestinationServer(req) {
 
 function handleRequest(req, res) {
   let destinationServer = determineDestinationServer(req)
+
   if (destinationServer) {
     let proxyRequest = http.request({
       host: destinationServer.destination,
