@@ -90,31 +90,41 @@ let httpsServer = config.httpsPort ? https.createServer({
   SNICallback: createSNICallback()
 }) : null
 
+function handleWebroot(req, res) {
+  let urlMatch
+
+  if (urlMatch = req.url.match(/\/.well-known\/acme-challenge\/([^\/]*)/)) {
+    let filePath = path.join(config.webrootPath, urlMatch[1])
+
+    let stream = fs.createReadStream(filePath)
+    res.writeHead(200)
+    stream.pipe(res)
+
+    stream.on('error', err => {
+      res.writeHead(404).end('404')
+    })
+
+    return req.doNotRedirect = true
+  }
+}
+
+httpServer.on('request', handleWebroot)
+
 if (httpsServer) {
-  config.servers.forEach(createSecureContext)
-
   httpServer.on('request', (req, res) => {
-    let urlMatch
-    if (urlMatch = req.url.match(/\/.well-known\/acme-challenge\/([^\/]*)/)) {
-      let filePath = path.join(config.webrootPath, urlMatch[1])
-
-      let stream = fs.createReadStream(filePath)
-      stream.pipe(res)
-
-      stream.on('error', err => {
-        res.writeHead(404).end('404')
-      })
-
-      return
-    }
+    if (req.doNotRedirect) return
 
     let redirectedURL = 'https://' + req.headers.host + req.url
 
     res.writeHead(308, { Location: redirectedURL })
     res.end()
   })
+
+  config.servers.forEach(createSecureContext)
+
   httpServer.listen(config.httpPort)
 
+  httpsServer.on('request', handleWebroot)
   httpsServer.on('request', handleRequest)
   httpsServer.listen(config.httpsPort)
 } else {
