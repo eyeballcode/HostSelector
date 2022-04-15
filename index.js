@@ -96,7 +96,7 @@ if (httpsServer) {
   httpServer.on('request', (req, res) => {
     let urlMatch
     if (urlMatch = req.url.match(/\/.well-known\/acme-challenge\/([^\/]*)/)) {
-      let filePath = path.join(config.webrootPath, urlMatch[0])
+      let filePath = path.join(config.webrootPath, urlMatch[1])
 
       let stream = fs.createReadStream(filePath)
       stream.pipe(res)
