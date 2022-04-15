@@ -90,6 +90,11 @@ function handleRequest(req, res) {
       proxyResponse.pipe(res)
     })
 
+    proxyRequest.on('error', error => {
+      res.writeHead(503)
+      res.end('Error: Could not proxy request to server')
+    })
+
     req.pipe(proxyRequest)
   }
 }
