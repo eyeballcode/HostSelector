@@ -66,6 +66,8 @@ function determineDestinationServer(req) {
 }
 
 function handleRequest(req, res) {
+  if (req.ended) return
+
   let destinationServer = determineDestinationServer(req)
 
   if (destinationServer) {
@@ -102,7 +104,7 @@ function handleWebroot(req, res) {
       res.writeHead(404).end('404')
     })
 
-    return req.doNotRedirect = true
+    return req.ended = true
   }
 }
 
@@ -110,7 +112,7 @@ httpServer.on('request', handleWebroot)
 
 if (httpsServer) {
   httpServer.on('request', (req, res) => {
-    if (req.doNotRedirect) return
+    if (req.ended) return
 
     let redirectedURL = 'https://' + req.headers.host + req.url
 
