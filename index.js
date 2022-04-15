@@ -18,26 +18,31 @@ let secureContexts = {}
 let wildcards = []
 
 function createSecureContext(certInfo) {
-  let certPath = certInfo.sslCertPath
-  let certHost = certInfo.host
+  try {
+    let certPath = certInfo.sslCertPath
+    let certHost = certInfo.host
 
-  let sslCertPath = path.join(certPath, 'fullchain.pem')
-  let sslKeyPath = path.join(certPath, 'privkey.pem')
-  let caPath = path.join(certPath, 'chain.pem')
+    let sslCertPath = path.join(certPath, 'fullchain.pem')
+    let sslKeyPath = path.join(certPath, 'privkey.pem')
+    let caPath = path.join(certPath, 'chain.pem')
 
-  let context = tls.createSecureContext({
-    cert: fs.readFileSync(sslCertPath),
-    key: fs.readFileSync(sslKeyPath),
-    ca: fs.readFileSync(caPath),
-    minVersion: 'TLSv1.2'
-  })
+    let context = tls.createSecureContext({
+      cert: fs.readFileSync(sslCertPath),
+      key: fs.readFileSync(sslKeyPath),
+      ca: fs.readFileSync(caPath),
+      minVersion: 'TLSv1.2'
+    })
 
-  if (certHost.startsWith('*.')) {
-    let up = certHost.slice(2)
-    if (!wildcards.includes(up)) wildcards.push(up)
-    secureContexts[up] = context
-  } else {
-    secureContexts[certHost] = context
+    if (certHost.startsWith('*.')) {
+      let up = certHost.slice(2)
+      if (!wildcards.includes(up)) wildcards.push(up)
+      secureContexts[up] = context
+    } else {
+      secureContexts[certHost] = context
+    }
+  } catch (e) {
+    console.log('Registration for', certInfo.host, 'failed');
+    certInfo.failed = true
   }
 }
 
@@ -61,6 +66,8 @@ function determineDestinationServer(req) {
     return server.host === host ||
       (server.isWildcard && ('.' + host).endsWith(server.matches))
   })
+
+  if (destinationServer.failed) return null
 
   return destinationServer
 }
