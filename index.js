@@ -91,10 +91,8 @@ let httpsServer = config.httpsPort ? https.createServer({
 }) : null
 
 function handleWebroot(req, res) {
-  let urlMatch
-
-  if (urlMatch = req.url.match(/\/.well-known\/acme-challenge\/([^\/]*)/)) {
-    let filePath = path.join(config.webrootPath, urlMatch[1])
+  if (req.url.match(/\/.well-known\/acme-challenge\/[^\/]*/)) {
+    let filePath = path.join(config.webrootPath, req.url)
 
     let stream = fs.createReadStream(filePath)
     res.writeHead(200)
