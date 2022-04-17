@@ -42,6 +42,7 @@ function createSecureContext(certInfo) {
     }
   } catch (e) {
     console.log('Registration for', certInfo.host, 'failed');
+    console.log(e);
     certInfo.failed = true
   }
 }
