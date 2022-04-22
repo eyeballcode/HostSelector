@@ -5,7 +5,11 @@ const fs = require('fs')
 const path = require('path')
 const config = require('./config.json')
 
+let MAX_RESPONSE_COUNTS = 50
+
 let availableServers = config.servers.map(server => {
+  server.responseTimes = []
+
   if (server.host.startsWith('*')) {
     server.isWildcard = true
     server.matches = server.host.slice(2)
@@ -73,12 +77,33 @@ function determineDestinationServer(req) {
   return destinationServer
 }
 
+function logRequestTime(server, time) {
+  let duration = new Date() - time
+  server.responseTimes = [...server.responseTimes.slice(1 - MAX_RESPONSE_COUNTS), duration]
+}
+
+function handleSiteResponse(server, res) {
+  let counts = server.responseTimes.length
+   let sum = server.responseTimes.reduce((a, b) => a + b, 0)
+   let average = sum / counts
+
+  res.writeHead(200, { 'content-type': 'application/json' })
+  res.end(JSON.stringify({
+    host: server.host,
+    average: parseFloat(average.toFixed(3))
+  }))
+}
+
 function handleRequest(req, res) {
   if (req.ended) return
+
+  let startTime = new Date()
 
   let destinationServer = determineDestinationServer(req)
 
   if (destinationServer) {
+    if (req.url === '/.host-proxy/site-response') return handleSiteResponse(destinationServer, res)
+
     let proxyRequest = http.request({
       host: destinationServer.destination,
       port: destinationServer.port,
@@ -89,6 +114,10 @@ function handleRequest(req, res) {
     }, proxyResponse => {
       res.writeHead(proxyResponse.statusCode, proxyResponse.headers)
       proxyResponse.pipe(res)
+
+      res.on('close', () => {
+        if (!req.url.startsWith('/static/')) logRequestTime(destinationServer, startTime)
+      })
     })
 
     proxyRequest.on('error', error => {
