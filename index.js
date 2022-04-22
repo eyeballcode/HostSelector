@@ -109,7 +109,10 @@ function handleRequest(req, res) {
       port: destinationServer.port,
       path: req.url,
       method: req.method,
-      headers: req.headers,
+      headers: {
+        ...req.headers,
+        'x-fowarded-for': req.connection.remoteAddress
+      },
       timeout: 30 * 1000
     }, proxyResponse => {
       res.writeHead(proxyResponse.statusCode, proxyResponse.headers)
