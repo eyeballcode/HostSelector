@@ -111,7 +111,7 @@ function handleRequest(req, res) {
       method: req.method,
       headers: {
         ...req.headers,
-        'x-fowarded-for': req.connection.remoteAddress
+        'x-forwarded-for': req.connection.remoteAddress
       },
       timeout: 30 * 1000
     }, proxyResponse => {
