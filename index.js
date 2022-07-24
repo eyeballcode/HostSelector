@@ -3,7 +3,9 @@ const https = require('https')
 const tls = require('tls')
 const fs = require('fs')
 const path = require('path')
+const url = require('url')
 const config = require('./config.json')
+const { WebSocket, WebSocketServer, createWebSocketStream } = require('ws')
 
 let MAX_RESPONSE_COUNTS = 50
 
@@ -176,3 +178,27 @@ if (httpsServer) {
   httpServer.on('request', handleRequest)
   httpServer.listen(config.httpPort)
 }
+
+let websocketServer = new WebSocketServer({ noServer: true })
+let server = httpsServer || httpServer
+server.on('upgrade', (req, socket, head) => {
+  let pathname = url.parse(req.url).pathname
+  let destinationServer = determineDestinationServer(req)
+
+  let proxyWS = new WebSocket(`ws://${destinationServer.destination}:${destinationServer.port}${pathname}`, {
+    headers: req.headers
+  })
+
+  proxyWS.on('open', () => {
+    websocketServer.handleUpgrade(req, socket, head, ws => {
+      let proxyStream = createWebSocketStream(proxyWS, { encoding: 'utf8' });
+      let wsStream = createWebSocketStream(ws, { encoding: 'utf8' });
+
+      proxyStream.pipe(wsStream)
+      wsStream.pipe(proxyStream)
+    })
+  })
+
+  proxyWS.on('error', () => socket.destroy())
+  proxyWS.on('close', () => socket.destroy())
+})
