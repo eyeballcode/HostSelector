@@ -196,9 +196,22 @@ server.on('upgrade', (req, socket, head) => {
 
       proxyStream.pipe(wsStream)
       wsStream.pipe(proxyStream)
+
+      ws.isAlive = true
+      ws.on('pong', () => ws.isAlive = true)
+      ws.on('pong', () => console.log('pong'))
     })
   })
 
   proxyWS.on('error', () => socket.destroy())
   proxyWS.on('close', () => socket.destroy())
 })
+
+setInterval(() => {
+  websocketServer.clients.forEach(ws => {
+    if (!ws.isAlive) return ws.terminate()
+
+    ws.isAlive = false
+    ws.ping()
+  })
+}, 1000 * 30)
