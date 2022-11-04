@@ -106,15 +106,21 @@ function handleRequest(req, res) {
   if (destinationServer) {
     if (req.url === '/.host-proxy/site-response') return handleSiteResponse(destinationServer, res)
 
-    let proxyRequest = http.request({
+    let headers = {}
+
+    let excludedHeaders = destinationServer.dropHeaders || []
+    for (let headerName of Object.keys(req.headers)) {
+      if (!excludedHeaders.includes(headerName)) headers[headerName] = req.headers[headerName]
+    }
+
+    headers['x-forwarded-for'] = req.connection.remoteAddress
+
+    let proxyRequest = (destinationServer.useHTTPS ? https : http).request({
       host: destinationServer.destination,
       port: destinationServer.port,
       path: req.url,
       method: req.method,
-      headers: {
-        ...req.headers,
-        'x-forwarded-for': req.connection.remoteAddress
-      },
+      headers,
       timeout: 30 * 1000
     }, proxyResponse => {
       res.writeHead(proxyResponse.statusCode, proxyResponse.headers)
