@@ -205,7 +205,6 @@ server.on('upgrade', (req, socket, head) => {
 
       ws.isAlive = true
       ws.on('pong', () => ws.isAlive = true)
-      ws.on('pong', () => console.log('pong'))
     })
   })
 
