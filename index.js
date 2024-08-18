@@ -74,7 +74,7 @@ function determineDestinationServer(req) {
       (server.isWildcard && ('.' + host).endsWith(server.matches))
   })
 
-  if (destinationServer.failed) return null
+  if (!destinationServer || destinationServer.failed) return null
 
   return destinationServer
 }
@@ -113,7 +113,7 @@ function handleRequest(req, res) {
       if (!excludedHeaders.includes(headerName)) headers[headerName] = req.headers[headerName]
     }
 
-    headers['x-forwarded-for'] = req.connection.remoteAddress
+    if (req.connection.remoteAddress) headers['x-forwarded-for'] = req.connection.remoteAddress
 
     let proxyRequest = (destinationServer.useHTTPS ? https : http).request({
       host: destinationServer.destination,
