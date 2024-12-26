@@ -150,13 +150,16 @@ function handleWebroot(req, res) {
     let filePath = path.join(config.webrootPath, req.url)
 
     let stream = fs.createReadStream(filePath)
-    res.writeHead(200)
-    stream.pipe(res)
 
+    stream.on('open', () => {
+      res.writeHead(200)
+      stream.pipe(res)
+    })
+    
     stream.on('error', err => {
       res.writeHead(404).end('404')
     })
-
+    
     return req.ended = true
   }
 }
