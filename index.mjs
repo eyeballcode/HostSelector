@@ -1,11 +1,12 @@
-const http = require('http')
-const https = require('https')
-const tls = require('tls')
-const fs = require('fs')
-const path = require('path')
-const url = require('url')
-const config = require('./config.json')
-const { WebSocket, WebSocketServer, createWebSocketStream } = require('ws')
+import http from 'http'
+import https from 'https'
+import tls from 'tls'
+import fs from 'fs/promises'
+import { createReadStream } from 'fs'
+import path from 'path'
+import url from 'url'
+import config from './config.json' with { type: 'json' }
+import { WebSocket, WebSocketServer, createWebSocketStream } from 'ws'
 
 let MAX_RESPONSE_COUNTS = 50
 
@@ -23,7 +24,7 @@ let availableServers = config.servers.map(server => {
 let secureContexts = {}
 let wildcards = []
 
-function createSecureContext(certInfo) {
+async function createSecureContext(certInfo) {
   try {
     let certPath = certInfo.sslCertPath
     let certHost = certInfo.host
@@ -33,9 +34,9 @@ function createSecureContext(certInfo) {
     let caPath = path.join(certPath, 'chain.pem')
 
     let context = tls.createSecureContext({
-      cert: fs.readFileSync(sslCertPath),
-      key: fs.readFileSync(sslKeyPath),
-      ca: fs.readFileSync(caPath),
+      cert: await fs.readFile(sslCertPath),
+      key: await fs.readFile(sslKeyPath),
+      ca: await fs.readFile(caPath),
       minVersion: 'TLSv1.2'
     })
 
@@ -149,7 +150,7 @@ function handleWebroot(req, res) {
   if (req.url.match(/\/.well-known\/acme-challenge\/[^\/]*/)) {
     let filePath = path.join(config.webrootPath, req.url)
 
-    let stream = fs.createReadStream(filePath)
+    let stream = createReadStream(filePath)
 
     stream.on('open', () => {
       res.writeHead(200)
