@@ -168,14 +168,18 @@ function handleWebroot(req, res) {
 httpServer.on('request', handleWebroot)
 
 if (httpsServer) {
-  httpServer.on('request', (req, res) => {
-    if (req.ended) return
+  if (config.enforceHTTPS) {
+    httpServer.on('request', (req, res) => {
+      if (req.ended) return
 
-    let redirectedURL = 'https://' + req.headers.host + req.url
+      let redirectedURL = 'https://' + req.headers.host + req.url
 
-    res.writeHead(308, { Location: redirectedURL })
-    res.end()
-  })
+      res.writeHead(308, { Location: redirectedURL })
+      res.end()
+    })
+  } else {
+    httpServer.on('request', handleRequest)
+  }
 
   config.servers.forEach(createSecureContext)
 
