@@ -7,6 +7,8 @@ import path from 'path'
 import url from 'url'
 import config from './config.json' with { type: 'json' }
 import { WebSocket, WebSocketServer, createWebSocketStream } from 'ws'
+import { getLoadAverages, hasHighLoadAvg } from './monitor-server.mjs'
+import { spawn } from 'child_process'
 
 let MAX_RESPONSE_COUNTS = 50
 
@@ -85,10 +87,19 @@ function logRequestTime(server, time) {
   server.responseTimes = [...server.responseTimes.slice(1 - MAX_RESPONSE_COUNTS), duration]
 }
 
+function getServerAverage(server) {
+  return {
+    ...server,
+    average: server.responseTimes.length === 0 ? 0 : server.responseTimes.reduce((a, b) => a + b, 0) / server.responseTimes.length
+  }
+}
+
+function getServerAverages() {
+  return availableServers.map(getServerAverage)
+}
+
 function handleSiteResponse(server, res) {
-  let counts = server.responseTimes.length
-   let sum = server.responseTimes.reduce((a, b) => a + b, 0)
-   let average = sum / counts
+  let { average } = getServerAverage(server)
 
   res.writeHead(200, { 'content-type': 'application/json' })
   res.end(JSON.stringify({
@@ -228,3 +239,15 @@ setInterval(() => {
     ws.ping()
   })
 }, 1000 * 30)
+
+try {
+  await getLoadAverages()
+  setInterval(async () => {
+    let hasSlowServer = getServerAverages().some(sever => sever.average >= 30)
+    if (hasSlowServer && await hasHighLoadAvg()) {
+      console.log('Slow server & high load avg', server)
+      spawn('sudo', ['reboot'])
+    }
+  }, 1000 * 60)
+} catch (e) {
+}
