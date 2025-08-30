@@ -98,6 +98,10 @@ function getServerAverages() {
   return availableServers.map(getServerAverage)
 }
 
+function resetServerAverages() {
+  availableServers.forEach(server => server.responseTimes = [])
+}
+
 function handleSiteResponse(server, res) {
   let { average } = getServerAverage(server)
 
@@ -242,13 +246,16 @@ setInterval(() => {
 
 try {
   await getLoadAverages()
-  setInterval(async () => {
-    let slowServer = getServerAverages().find(sever => sever.average >= 3000)
-    let hasSlowServer = !!slowServer
-    if (hasSlowServer && await hasHighLoadAvg()) {
-      console.log('Slow server & high load avg', slowServer)
-      spawn('sudo', ['reboot'])
-    }
-  }, 1000 * 60)
+  setTimeout(() => {
+    resetServerAverages()
+    setInterval(async () => {
+      let slowServer = getServerAverages().find(sever => sever.average >= 3000)
+      let hasSlowServer = !!slowServer
+      if (hasSlowServer && await hasHighLoadAvg()) {
+        console.log('Slow server & high load avg', slowServer)
+        spawn('sudo', ['reboot'])
+      }
+    }, 1000 * 60)
+  }, 1000 * 60 * 1.5)
 } catch (e) {
 }
