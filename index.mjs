@@ -245,16 +245,19 @@ setInterval(() => {
 }, 1000 * 30)
 
 try {
+  let hadSlowServer = false
   await getLoadAverages()
   setTimeout(() => {
     resetServerAverages()
     setInterval(async () => {
       let slowServer = getServerAverages().find(sever => sever.average >= 3000)
       let hasSlowServer = !!slowServer
-      if (hasSlowServer && await hasHighLoadAvg()) {
+      if (hasSlowServer && hadSlowServer && await hasHighLoadAvg()) {
         console.log('Slow server & high load avg', slowServer)
         spawn('sudo', ['reboot'])
       }
+      hadSlowServer = hasSlowServer
+      resetServerAverages()
     }, 1000 * 60)
   }, 1000 * 60 * 1.5)
 } catch (e) {
